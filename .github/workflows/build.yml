@@ -39,6 +39,18 @@ jobs:
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
           echo "{\"appId\":\"com.chatline.app\",\"appName\":\"$APP_NAME\",\"webDir\":\"www\"}" > capacitor.config.json
           npx cap add android
+          IMG=$(ls *.png *.jpg *.jpeg *.webp 2>/dev/null | head -n 1 || true)
+          if [ -n "$IMG" ]; then
+            echo "Icon: $IMG"
+            RES=android/app/src/main/res
+            rm -rf $RES/mipmap-anydpi-v26
+            for P in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+              D=${P%%:*}; S=${P##*:}
+              for N in ic_launcher ic_launcher_round ic_launcher_foreground; do
+                convert "$IMG" -resize ${S}x${S}^ -gravity center -extent ${S}x${S} $RES/mipmap-$D/$N.png
+              done
+            done
+          fi
           cp ScreenGuardPlugin.java MainActivity.java android/app/src/main/java/com/chatline/app/
           npx cap sync android
           cd android
