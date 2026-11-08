@@ -2,6 +2,8 @@
 (function(){
 'use strict';
 /* ---- folder tabs: [filter, label]. filters: all | groups | personal | channels ---- */
+/* set to true to bring back the Telegram-style home screen */
+var HOME_UI=false;
 var TABS=[['all','All'],['groups','Groups'],['personal','WORK'],['channels','Bots']];
 
 var CSS=[
@@ -207,6 +209,7 @@ function push(){
   done='';return p.then(function(){return lo.call(CLA)})}}catch(_){}}
 
 function boot(){
+ if(!HOME_UI){push();return}
  if(!build()){setTimeout(boot,150);return}
  stories();
  try{new MutationObserver(function(){stories()}).observe($('stories'),{childList:true})}catch(_){}
