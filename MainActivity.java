@@ -1,7 +1,6 @@
-package com.chatline.app;
+package com.webapp.chatline;
 
 import android.os.Bundle;
-import android.view.WindowManager;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -9,6 +8,6 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ScreenGuardPlugin.class);
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        // FLAG_SECURE is NOT set here any more: screenshots are blocked only while the web app asks for it (setSecure on:true)
     }
 }
