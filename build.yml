@@ -1,0 +1,98 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # ===== فقط این دو خط رو ویرایش کن =====
+  SITE_URL: "https://CHANGE-ME.com/chatline.html"
+  APP_NAME: "Chatline"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build project and APK
+        run: |
+          set -e
+          mkdir -p www
+          echo '<!doctype html><meta charset="utf-8"><title>app</title>' > www/index.html
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          cat > capacitor.config.json <<EOF
+          {"appId":"com.chatline.app","appName":"$APP_NAME","webDir":"www","server":{"url":"$SITE_URL","cleartext":true}}
+          EOF
+          npx cap add android
+          JAVA_DIR=android/app/src/main/java/com/chatline/app
+          cat > $JAVA_DIR/ScreenGuardPlugin.java <<'EOF'
+          package com.chatline.app;
+
+          import android.app.Activity;
+          import android.view.WindowManager;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "ScreenGuard")
+          public class ScreenGuardPlugin extends Plugin {
+
+              private void lock() {
+                  final Activity a = getActivity();
+                  if (a == null) return;
+                  a.runOnUiThread(new Runnable() {
+                      @Override public void run() {
+                          a.getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+                      }
+                  });
+              }
+
+              @Override public void load() { lock(); }
+
+              @PluginMethod public void setSecure(PluginCall call) { lock(); call.resolve(); }
+
+              @PluginMethod public void enableDetection(PluginCall call) { lock(); call.resolve(); }
+          }
+          EOF
+          cat > $JAVA_DIR/MainActivity.java <<'EOF'
+          package com.chatline.app;
+
+          import android.os.Bundle;
+          import android.view.WindowManager;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(ScreenGuardPlugin.class);
+                  super.onCreate(savedInstanceState);
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+              }
+          }
+          EOF
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../chatline.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chatline-apk
+          path: chatline.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Chatline ${{ github.run_number }}
+          files: chatline.apk
