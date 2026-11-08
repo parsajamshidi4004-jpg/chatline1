@@ -43,12 +43,18 @@ jobs:
           if [ -n "$IMG" ]; then
             echo "Icon: $IMG"
             RES=android/app/src/main/res
-            rm -rf $RES/mipmap-anydpi-v26
-            for P in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-              D=${P%%:*}; S=${P##*:}
-              for N in ic_launcher ic_launcher_round ic_launcher_foreground; do
-                convert "$IMG" -resize ${S}x${S}^ -gravity center -extent ${S}x${S} $RES/mipmap-$D/$N.png
+            convert "$IMG" -gravity center -crop 88%x88%+0+0 +repage -resize 1024x1024^ -extent 1024x1024 icon_clean.png
+            mkdir -p $RES/mipmap-anydpi-v26
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n  <background android:drawable="@mipmap/ic_bg"/>\n  <foreground android:drawable="@mipmap/ic_fg"/>\n</adaptive-icon>\n' > $RES/mipmap-anydpi-v26/ic_launcher.xml
+            cp $RES/mipmap-anydpi-v26/ic_launcher.xml $RES/mipmap-anydpi-v26/ic_launcher_round.xml
+            for P in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+              D=$(echo $P | cut -d: -f1); L=$(echo $P | cut -d: -f2); A=$(echo $P | cut -d: -f3)
+              F=$((A*2/3))
+              for N in ic_launcher ic_launcher_round; do
+                convert icon_clean.png -resize ${L}x${L} $RES/mipmap-$D/$N.png
               done
+              convert icon_clean.png -resize ${F}x${F} -background none -gravity center -extent ${A}x${A} $RES/mipmap-$D/ic_fg.png
+              convert icon_clean.png -resize ${A}x${A}^ -gravity center -extent ${A}x${A} -blur 0x6 $RES/mipmap-$D/ic_bg.png
             done
           fi
           cp ScreenGuardPlugin.java MainActivity.java android/app/src/main/java/com/chatline/app/
